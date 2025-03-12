@@ -8,5 +8,5 @@ AOB/Offsets are most likely scrambled
 This wont be getting updates since its ofc a leak
 
 
-This source DOES NOT mean the trainer is safe
+This source DOES NOT mean the trainer is safe <br>
 The newer versions can always include new harmful content
