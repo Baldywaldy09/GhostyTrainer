@@ -1,4 +1,4 @@
-# GhosyTrainer
+# GhostyTrainer
 > Ghosty Trainer Leaked Source
 
 None of this source was made by myself (Baldy09/Baldywaldy09/Hunter)
