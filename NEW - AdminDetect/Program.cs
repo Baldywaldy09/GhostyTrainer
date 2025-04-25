@@ -6,6 +6,7 @@ using System.Linq;
 using System.Media;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,7 @@ internal class Program
 
 	private static readonly string AdminFilePath = Path.Combine(AdminFolder, "admin_tmp.txt");
 
-	private static readonly string AdminListUrl = "https://spyderrock.com/m1776478-adminstmp.txt";
+	private static readonly string AdminListUrl = "https://raw.githubusercontent.com/DizcatOff/GhostyLite/refs/heads/main/adminfile.txt";
 
 	private static string DiscordWebhookUrl = "";
 
@@ -130,6 +131,48 @@ internal class Program
 		await Task.Delay(1000);
 	}
 
+	private static async Task CheckPlayerStatus(string playerId)
+	{
+		_ = 1;
+		try
+		{
+			string requestUri = "https://api.truckersmp.com/v2/player/" + playerId;
+			HttpResponseMessage httpResponseMessage = await client.GetAsync(requestUri);
+			if (!httpResponseMessage.IsSuccessStatusCode)
+			{
+				PrintWithColor($"API request failed for ID {playerId}: {httpResponseMessage.StatusCode}", AlertColor);
+				return;
+			}
+			using JsonDocument jsonDocument = JsonDocument.Parse(await httpResponseMessage.Content.ReadAsStringAsync());
+			JsonElement rootElement = jsonDocument.RootElement;
+			if (!rootElement.GetProperty("error").GetBoolean())
+			{
+				JsonElement property = rootElement.GetProperty("response");
+				string @string = property.GetProperty("groupName").GetString();
+				JsonElement property2 = property.GetProperty("permissions");
+				bool boolean = property2.GetProperty("isStaff").GetBoolean();
+				bool boolean2 = property2.GetProperty("isGameAdmin").GetBoolean();
+				bool boolean3 = property2.GetProperty("isManagement").GetBoolean();
+				if (!string.IsNullOrEmpty(@string) && (@string.ToLower().Contains("admin") || @string.ToLower().Contains("staff") || @string.ToLower().Contains("retired")))
+				{
+					NotifyModerator($"Detected via API: Player {property.GetProperty("name").GetString()} (ID: {playerId}) - Group: {@string}", "API ADMIN");
+				}
+				else if (boolean || boolean2 || boolean3)
+				{
+					NotifyModerator($"Detected via API: Player {property.GetProperty("name").GetString()} (ID: {playerId}) - Admin Permissions Active", "API ADMIN");
+				}
+			}
+			else
+			{
+				PrintWithColor("API returned error for ID " + playerId, AlertColor);
+			}
+		}
+		catch (Exception ex)
+		{
+			PrintWithColor("Error checking API for ID " + playerId + ": " + ex.Message, AlertColor);
+		}
+	}
+
 	private static string GetLatestLogFilePath()
 	{
 		string text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "ETS2MP", "logs");
@@ -174,11 +217,19 @@ internal class Program
 
 	private static async Task SetupAdminFile()
 	{
-		_ = 1;
+		_ = 2;
 		try
 		{
-			string contents = await client.GetStringAsync(AdminListUrl);
+			string text = (await client.GetStringAsync(AdminListUrl)).Trim();
+			if (string.IsNullOrWhiteSpace(text) || !Uri.IsWellFormedUriString(text, UriKind.Absolute))
+			{
+				PrintWithColor("Error: Invalid admin list URL in GitHub file.", AlertColor);
+				return;
+			}
+			PrintWithColor("Downloading admin list from: " + text, PrimaryColor);
+			string contents = await client.GetStringAsync(text);
 			await File.WriteAllTextAsync(AdminFilePath, contents);
+			PrintWithColor("Admin database updated successfully.", SuccessColor);
 		}
 		catch (Exception ex)
 		{
